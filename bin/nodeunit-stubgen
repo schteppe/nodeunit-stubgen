@@ -1,0 +1,83 @@
+#!/usr/bin/env node
+
+var fs = require('fs')
+,   path = require('path')
+,   util = require('util')
+
+var cwd = process.cwd();
+
+var program = require('commander');
+program
+    .version('0.0.1')
+    .usage('[options] <data.json location>')
+    .option('-o, --outDir [dir]',     'Directory to store tests')
+    .option('-y, --yuiroot [string]', 'Root directory in yuidoc paths')
+    .option('-r, --root [dir]',       'Root directory (where your source is)')
+    .option('-i, --ignoreClasses <ClassNames>', 'Comma-separated list of classes to ignore.',
+        function(val) {
+            return val.split(',');
+        })
+    .parse(process.argv);
+
+if(program.args.length == 0){
+    console.error("No data.json path given. Need --help?");
+    process.exit(1);
+}
+
+var dataFilePath = program.args[0],
+    outDir = path.join(cwd,program.outDir),
+    data = require(path.join(cwd,dataFilePath));
+
+// Create out folder if it does not exist
+if(!fs.existsSync(outDir))
+    fs.mkdirSync(outDir);
+
+// To be stripped
+var base = program.yuiroot || "src",
+    tab = "    ",
+    lastClass = "",
+    excludeClasses = program.ignoreClasses||[],
+    collectorFileContent = "module.exports = {\n";
+
+for(var className in data.classes){
+
+    if(excludeClasses.indexOf(className) != -1)
+        continue;
+
+    var c = data.classes[className],
+        filePath = path.join(process.cwd(),program.root,c.file.replace(base,""));
+
+    // Get file dir
+    var dir = c.file.replace(base,"").replace(/^\//,"").replace(className+".js","").replace(/\/$/,"");
+    var testFilePath = path.join(outDir,dir,className)+".js";
+    var testFileDir = path.join(outDir,dir);
+
+    // Create folder if it does not exist
+    if(!fs.existsSync(testFileDir))
+        fs.mkdirSync(testFileDir);
+
+    // Create file contents
+    var fileContent = util.format("var %s = require('%s');\n\n",
+                                    className,
+                                    path.relative(outDir,filePath).replace(".js",""));
+
+
+    // Add test cases for all methods
+    for(var i=0; i<data.classitems.length; i++){
+        var item = data.classitems[i];
+
+        if(item.itemtype != "method" || item['class'] != className)
+            continue;
+
+        fileContent += util.format("module.exports.%s = function(test){\n%stest.done();\n};\n\n",item.name,tab);
+    }
+
+    // Create file
+    fs.writeFileSync(testFilePath,fileContent);
+
+    if(lastClass != className)
+        collectorFileContent += util.format("%s%s : require('./%s'),\n",tab,className,path.relative(__dirname,testFilePath).replace(".js",""));
+}
+
+collectorFileContent += "};";
+fs.writeFileSync(path.join(process.cwd(),program.outDir,"index.js"),collectorFileContent);

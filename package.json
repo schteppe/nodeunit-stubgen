@@ -1,0 +1,21 @@
+{
+  "name": "nodeunit-stubgen",
+  "version": "0.0.0",
+  "description": "Creates nodeunit test files given YUIDoc docs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "",
+  "keywords": [
+    "nodeunit"
+  ],
+  "author": "Stefan Hedman",
+  "license": "MIT",
+  "dependencies": {
+    "commander":"2.1.0"
+  },
+  "bin": {
+    "nodeunit-stubgen": "./bin/nodeunit-stubgen"
+  }
+}
