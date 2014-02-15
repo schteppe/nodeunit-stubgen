@@ -57,10 +57,18 @@ for(var className in data.classes){
         fs.mkdirSync(testFileDir);
 
     // Create file contents
-    var fileContent = util.format("var %s = require('%s');\n\n",
+    var fileContent = util.format("var %s = require(__dirname + '/%s');\n\nexports.construct = function(test){\n%s// STUB\n%stest.done();\n};\n\n",
                                     className,
-                                    path.relative(outDir,filePath).replace(".js",""));
+                                    path.relative(testFileDir,filePath).replace(/\.js$/,""),
+                                    tab,
+                                    tab);
 
+
+    // Sort items by method name
+    data.classitems.sort(function(a,b){
+        if(a.name == b.name) return 0;
+        return a.name > b.name ? 1 : -1;
+    });
 
     // Add test cases for all methods
     for(var i=0; i<data.classitems.length; i++){
@@ -69,14 +77,14 @@ for(var className in data.classes){
         if(item.itemtype != "method" || item['class'] != className)
             continue;
 
-        fileContent += util.format("module.exports.%s = function(test){\n%stest.done();\n};\n\n",item.name,tab);
+        fileContent += util.format("exports.%s = function(test){\n%s// STUB\n%stest.done();\n};\n\n",item.name,tab,tab);
     }
 
     // Create file
     fs.writeFileSync(testFilePath,fileContent);
 
     if(lastClass != className)
-        collectorFileContent += util.format("%s%s : require('./%s'),\n",tab,className,path.relative(__dirname,testFilePath).replace(".js",""));
+        collectorFileContent += util.format("%s%s : require('./%s'),\n",tab,className,path.relative(outDir,testFilePath).replace(/\.js$/,""));
 }
 
 collectorFileContent += "};";
